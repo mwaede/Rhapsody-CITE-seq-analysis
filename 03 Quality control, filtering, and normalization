@@ -1,0 +1,621 @@
+# 3.0 Perform quality control of data, filtering, and normalization
+
+# CARTRIDGE 1 
+### Update Seurat object, from cartridge 1
+Cartridge1[["RNA"]] <- as(object = Cartridge1[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name1 <- grep("pAbO", rownames(Cartridge1), value = T, ignore.case = T)
+rna_name1 <- rownames(Cartridge1)[-which(rownames(Cartridge1) %in% ab_name1)]
+# get rna and AbSeq UMI counts, meta data
+ab1 <- GetAssayData(Cartridge1[["RNA"]], features = ab_name1)
+rna1 <- GetAssayData(Cartridge1[["RNA"]], features = rna_name1)
+# recreate seurat object
+Cartridge1[["RNA"]] <- CreateAssay5Object(counts = rna1)
+Cartridge1[["ADT"]] <- CreateAssay5Object(counts = ab1)
+head(Cartridge1@meta.data)
+### QC of Seurat object, from cartridge 1
+Cartridge1@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  tally(name = "cell_count") %>% 
+  ggplot(aes(x=Sample_Name, y=cell_count, fill= Sample_Name)) + 
+  geom_bar(stat = "identity") +
+  geom_text(aes(y = cell_count,
+                label = cell_count,
+                vjust= -0.5, size = 2.5), show.legend = FALSE) + 
+  theme_classic()
+### Remove multiplets, undetermined, not used sampletags
+Cartridge1 <- subset(Cartridge1, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag05_hs", "SampleTag07_hs", "SampleTag10_hs", "SampleTag11_hs"), invert = T)
+### Save Cartride 1 with only called cells from loaded samples
+save(Cartridge1, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge1.Rdata")
+### nCount_RNA for the sum of UMI counts per cell
+Cartridge1@meta.data %>% 
+  ggplot(aes(color=Sample_Name, x=nCount_RNA, fill= Sample_Name)) + 
+  geom_density(alpha = 0.2) + 
+  scale_x_log10() + 
+  theme_classic() +
+  ylab("Cell density") +
+  ggtitle("nCount_RNA")
+### nFeature_RNA for the sum of gene counts per
+Cartridge1@meta.data %>% 
+  ggplot(aes(color=Sample_Name, x=nFeature_RNA, fill= Sample_Name)) + 
+  geom_density(alpha = 0.2) + 
+  scale_x_log10() + 
+  theme_classic() +
+  ylab("Cell density") +
+  ggtitle("nFeature_RNA")
+### Metrices to decide the filtering threshold for Cartridge 1
+Cartridge1@meta.data %>% 
+  ggplot(aes(x=nCount_RNA, y=nFeature_RNA)) + 
+  geom_point() + 
+  scale_colour_gradient(low = "gray90", high = "black") +
+  stat_smooth(method=lm) +
+  scale_x_log10() + 
+  scale_y_log10() + 
+  theme_classic() +
+  geom_vline(xintercept = 70, colour = "red") +
+  geom_hline(yintercept = 30, colour = "red") +
+  facet_wrap(~Sample_Name) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#The data is fitted with a linear regression line. We expect when UMI counts increase, gene counts also increase.
+#Upper right quadrant: Cells with high gene counts and UMI counts. We generally consider these cells to be good-quality cells.
+#Bottom right quadrant: Cells with low gene counts and UMI counts. We generally consider these cells are low-quality cells.
+VlnPlot(Cartridge1, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+### Filter data for "bad" cells in Cartridge 1
+filtered.car1 <- subset(x = Cartridge1, 
+                        subset = (nFeature_RNA >= 25))
+### Metrices after filtering within Cartridge 1
+filtered.car1@meta.data %>% 
+  ggplot(aes(x=nCount_RNA, y=nFeature_RNA)) + 
+  geom_point() + 
+  scale_colour_gradient(low = "gray90", high = "black") +
+  stat_smooth(method=lm) +
+  scale_x_log10() + 
+  scale_y_log10() + 
+  theme_classic() +
+  geom_vline(xintercept = 70, colour = "red") +
+  geom_hline(yintercept = 30, colour = "red") +
+  facet_wrap(~Sample_Name) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+VlnPlot(filtered.car1, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+### Cell number before filtering Cartridge 1
+Cartridge1@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 1
+filtered.car1@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 1
+save(filtered.car1, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car1.Rdata")
+### Normalize data in Cartridge 1
+filtered.car1 <- NormalizeData(filtered.car1, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car1, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car1.rds")
+
+### OBS - similar plots for cartridge 2-16 were made
+
+# CARTRIDGE 2 
+### Update Seurat object, from cartridge 2
+Cartridge2[["RNA"]] <- as(object = Cartridge2[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name2 <- grep("pAbO", rownames(Cartridge2), value = T, ignore.case = T)
+rna_name2 <- rownames(Cartridge2)[-which(rownames(Cartridge2) %in% ab_name2)]
+# get rna and AbSeq UMI counts, meta data
+ab2 <- GetAssayData(Cartridge2[["RNA"]], features = ab_name2)
+rna2 <- GetAssayData(Cartridge2[["RNA"]], features = rna_name2)
+# recreate seurat object
+Cartridge2[["RNA"]] <- CreateAssay5Object(counts = rna2)
+Cartridge2[["ADT"]] <- CreateAssay5Object(counts = ab2)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge2 <- subset(Cartridge2, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag03_hs", "SampleTag04_hs", "SampleTag09_hs", "SampleTag10_hs"), invert = T)
+### Save Cartride 2 with only called cells from loaded samples
+save(Cartridge2, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge2.Rdata")
+### Filter data for "bad" cells in Cartridge 2
+filtered.car2 <- subset(x = Cartridge2, 
+                        subset = (nFeature_RNA >= 40))
+### Cell number before filtering Cartridge 2
+Cartridge2@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 2
+filtered.car2@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 2
+save(filtered.car2, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car2.Rdata")
+### Normalize data in Cartridge 2
+filtered.car2 <- NormalizeData(filtered.car2, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car2, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car2.rds")
+
+
+# CARTRIDGE 3 
+### Update Seurat object, from cartridge 3
+Cartridge3[["RNA"]] <- as(object = Cartridge3[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name3 <- grep("pAbO", rownames(Cartridge3), value = T, ignore.case = T)
+rna_name3 <- rownames(Cartridge3)[-which(rownames(Cartridge3) %in% ab_name3)]
+# get rna and AbSeq UMI counts, meta data
+ab3 <- GetAssayData(Cartridge3[["RNA"]], features = ab_name3)
+rna3 <- GetAssayData(Cartridge3[["RNA"]], features = rna_name3)
+# recreate seurat object
+Cartridge3[["RNA"]] <- CreateAssay5Object(counts = rna3)
+Cartridge3[["ADT"]] <- CreateAssay5Object(counts = ab3)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge3 <- subset(Cartridge3, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag03_hs", "SampleTag05_hs", "SampleTag07_hs"), invert = T)
+### Save Cartride 3 with only called cells from loaded samples
+save(Cartridge3, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge3.Rdata")
+### Filter data for "bad" cells in Cartridge 3
+filtered.car3 <- subset(x = Cartridge3, 
+                        subset = (nFeature_RNA >= 32))
+### Cell number before filtering Cartridge 3
+Cartridge3@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 3
+filtered.car3@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 3
+save(filtered.car3, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car3.Rdata")
+### Normalize data in Cartridge 3
+filtered.car3 <- NormalizeData(filtered.car3, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car3, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car3.rds")
+
+
+# CARTRIDGE 4
+### Update Seurat object, from cartridge 4
+Cartridge4[["RNA"]] <- as(object = Cartridge4[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name4 <- grep("pAbO", rownames(Cartridge4), value = T, ignore.case = T)
+rna_name4 <- rownames(Cartridge4)[-which(rownames(Cartridge4) %in% ab_name4)]
+# get rna and AbSeq UMI counts, meta data
+ab4 <- GetAssayData(Cartridge4[["RNA"]], features = ab_name4)
+rna4 <- GetAssayData(Cartridge4[["RNA"]], features = rna_name4)
+# recreate seurat object
+Cartridge4[["RNA"]] <- CreateAssay5Object(counts = rna4)
+Cartridge4[["ADT"]] <- CreateAssay5Object(counts = ab4)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge4 <- subset(Cartridge4, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag05_hs", "SampleTag07_hs", "SampleTag10_hs"), invert = T)
+### Save Cartride 4 with only called cells from loaded samples
+save(Cartridge4, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge4.Rdata")
+### Filter data for "bad" cells in Cartridge 4
+filtered.car4 <- subset(x = Cartridge4, 
+                        subset = (nFeature_RNA >= 32))
+### Cell number before filtering Cartridge 4
+Cartridge4@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 4
+filtered.car4@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 4
+save(filtered.car4, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car4.Rdata")
+### Normalize data in Cartridge 4
+filtered.car4 <- NormalizeData(filtered.car4, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car4, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car4.rds")
+
+
+# CARTRIDGE 5
+### Update Seurat object, from cartridge 5
+Cartridge5[["RNA"]] <- as(object = Cartridge5[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name5 <- grep("pAbO", rownames(Cartridge5), value = T, ignore.case = T)
+rna_name5 <- rownames(Cartridge5)[-which(rownames(Cartridge5) %in% ab_name5)]
+# get rna and AbSeq UMI counts, meta data
+ab5 <- GetAssayData(Cartridge5[["RNA"]], features = ab_name5)
+rna5 <- GetAssayData(Cartridge5[["RNA"]], features = rna_name5)
+# recreate seurat object
+Cartridge5[["RNA"]] <- CreateAssay5Object(counts = rna5)
+Cartridge5[["ADT"]] <- CreateAssay5Object(counts = ab5)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge5 <- subset(Cartridge5, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag03_hs", "SampleTag04_hs", "SampleTag11_hs"), invert = T)
+### Save Cartride 4 with only called cells from loaded samples
+save(Cartridge5, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge5.Rdata")
+### Filter data for "bad" cells in Cartridge 5
+filtered.car5 <- subset(x = Cartridge5, 
+                        subset = (nFeature_RNA >= 34))
+### Cell number before filtering Cartridge 5
+Cartridge5@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 5
+filtered.car5@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 5
+save(filtered.car5, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car5.Rdata")
+### Normalize data in Cartridge 5
+filtered.car5 <- NormalizeData(filtered.car5, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car5, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car5.rds")
+
+# CARTRIDGE 6
+### Update Seurat object, from cartridge 6
+Cartridge6[["RNA"]] <- as(object = Cartridge6[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name6 <- grep("pAbO", rownames(Cartridge6), value = T, ignore.case = T)
+rna_name6 <- rownames(Cartridge6)[-which(rownames(Cartridge6) %in% ab_name6)]
+# get rna and AbSeq UMI counts, meta data
+ab6 <- GetAssayData(Cartridge6[["RNA"]], features = ab_name6)
+rna6 <- GetAssayData(Cartridge6[["RNA"]], features = rna_name6)
+# recreate seurat object
+Cartridge6[["RNA"]] <- CreateAssay5Object(counts = rna6)
+Cartridge6[["ADT"]] <- CreateAssay5Object(counts = ab6)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge6 <- subset(Cartridge6, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag03_hs", "SampleTag04_hs", "SampleTag05_hs", "SampleTag06_hs", "SampleTag07_hs"), invert = T)
+### Save Cartridge 6 with only called cells from loaded samples
+save(Cartridge6, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge6.Rdata")
+### Filter data for "bad" cells in Cartridge 6
+filtered.car6 <- subset(x = Cartridge6, 
+                        subset = (nFeature_RNA >= 28))
+### Cell number before filtering Cartridge 6
+Cartridge6@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 6
+filtered.car6@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 6
+save(filtered.car6, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car6.Rdata")
+### Normalize data in Cartridge 6
+filtered.car6 <- NormalizeData(filtered.car6, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car6, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car6.rds")
+
+# CARTRIDGE 7
+### Update Seurat object, from cartridge 7
+Cartridge7[["RNA"]] <- as(object = Cartridge7[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name7 <- grep("pAbO", rownames(Cartridge7), value = T, ignore.case = T)
+rna_name7 <- rownames(Cartridge7)[-which(rownames(Cartridge7) %in% ab_name7)]
+# get rna and AbSeq UMI counts, meta data
+ab7 <- GetAssayData(Cartridge7[["RNA"]], features = ab_name7)
+rna7 <- GetAssayData(Cartridge7[["RNA"]], features = rna_name7)
+# recreate seurat object
+Cartridge7[["RNA"]] <- CreateAssay5Object(counts = rna7)
+Cartridge7[["ADT"]] <- CreateAssay5Object(counts = ab7)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge7 <- subset(Cartridge7, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag05_hs", "SampleTag06_hs", "SampleTag07_hs", "SampleTag10_hs", "SampleTag11_hs"), invert = T)
+### Save Cartridge 7 with only called cells from loaded samples
+save(Cartridge7, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge7.Rdata")
+### Filter data for "bad" cells in Cartridge 7
+filtered.car7 <- subset(x = Cartridge7, 
+                        subset = (nFeature_RNA >= 38))
+### Cell number before filtering Cartridge 7
+Cartridge7@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 7
+filtered.car7@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 7
+save(filtered.car7, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car7.Rdata")
+### Normalize data in Cartridge 7
+filtered.car7 <- NormalizeData(filtered.car7, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car7, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car7.rds")
+
+# CARTRIDGE 8
+### Update Seurat object, from cartridge 8
+Cartridge8[["RNA"]] <- as(object = Cartridge8[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name8 <- grep("pAbO", rownames(Cartridge8), value = T, ignore.case = T)
+rna_name8 <- rownames(Cartridge8)[-which(rownames(Cartridge8) %in% ab_name8)]
+# get rna and AbSeq UMI counts, meta data
+ab8 <- GetAssayData(Cartridge8[["RNA"]], features = ab_name8)
+rna8 <- GetAssayData(Cartridge8[["RNA"]], features = rna_name8)
+# recreate seurat object
+Cartridge8[["RNA"]] <- CreateAssay5Object(counts = rna8)
+Cartridge8[["ADT"]] <- CreateAssay5Object(counts = ab8)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge8 <- subset(Cartridge8, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag03_hs", "SampleTag04_hs", "SampleTag11_hs"), invert = T)
+### Save Cartridge 8 with only called cells from loaded samples
+save(Cartridge8, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge8.Rdata")
+### Filter data for "bad" cells in Cartridge 8
+filtered.car8 <- subset(x = Cartridge8, 
+                        subset = (nFeature_RNA >= 35))
+### Cell number before filtering Cartridge 8
+Cartridge8@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 8
+filtered.car8@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 8
+save(filtered.car8, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car8.Rdata")
+### Normalize data in Cartridge 8
+filtered.car8 <- NormalizeData(filtered.car8, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car8, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car8.rds")
+
+# CARTRIDGE 9
+### Update Seurat object, from cartridge 9
+Cartridge9[["RNA"]] <- as(object = Cartridge9[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name9 <- grep("pAbO", rownames(Cartridge9), value = T, ignore.case = T)
+rna_name9 <- rownames(Cartridge9)[-which(rownames(Cartridge9) %in% ab_name9)]
+# get rna and AbSeq UMI counts, meta data
+ab9 <- GetAssayData(Cartridge9[["RNA"]], features = ab_name9)
+rna9 <- GetAssayData(Cartridge9[["RNA"]], features = rna_name9)
+# recreate seurat object
+Cartridge9[["RNA"]] <- CreateAssay5Object(counts = rna9)
+Cartridge9[["ADT"]] <- CreateAssay5Object(counts = ab9)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge9 <- subset(Cartridge9, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag03_hs", "SampleTag06_hs", "SampleTag07_hs"), invert = T)
+### Save Cartridge 9 with only called cells from loaded samples
+save(Cartridge9, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge9.Rdata")
+### Filter data for "bad" cells in Cartridge 9
+filtered.car9 <- subset(x = Cartridge9, 
+                        subset = (nFeature_RNA >= 33))
+### Cell number before filtering Cartridge 9
+Cartridge9@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 9
+filtered.car9@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 9
+save(filtered.car9, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car9.Rdata")
+### Normalize data in Cartridge 9
+filtered.car9 <- NormalizeData(filtered.car9, 
+                               normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car9, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car9.rds")
+
+# CARTRIDGE 10
+### Update Seurat object, from cartridge 10
+Cartridge10[["RNA"]] <- as(object = Cartridge10[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name10 <- grep("pAbO", rownames(Cartridge10), value = T, ignore.case = T)
+rna_name10 <- rownames(Cartridge10)[-which(rownames(Cartridge10) %in% ab_name10)]
+# get rna and AbSeq UMI counts, meta data
+ab10 <- GetAssayData(Cartridge10[["RNA"]], features = ab_name10)
+rna10 <- GetAssayData(Cartridge10[["RNA"]], features = rna_name10)
+# recreate seurat object
+Cartridge10[["RNA"]] <- CreateAssay5Object(counts = rna10)
+Cartridge10[["ADT"]] <- CreateAssay5Object(counts = ab10)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge10 <- subset(Cartridge10, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag06_hs", "SampleTag09_hs", "SampleTag11_hs", "SampleTag12_hs"), invert = T)
+### Save Cartridge 10 with only called cells from loaded samples
+save(Cartridge10, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge10.Rdata")
+### Filter data for "bad" cells in Cartridge 10
+filtered.car10 <- subset(x = Cartridge10, 
+                         subset = (nFeature_RNA >= 36))
+### Cell number before filtering Cartridge 10
+Cartridge10@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 10
+filtered.car10@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 10
+save(filtered.car10, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car10.Rdata")
+### Normalize data in Cartridge 10
+filtered.car10 <- NormalizeData(filtered.car10, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car10, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car10.rds")
+
+# CARTRIDGE 11
+### Update Seurat object, from cartridge 11
+Cartridge11[["RNA"]] <- as(object = Cartridge11[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name11 <- grep("pAbO", rownames(Cartridge11), value = T, ignore.case = T)
+rna_name11 <- rownames(Cartridge11)[-which(rownames(Cartridge11) %in% ab_name11)]
+# get rna and AbSeq UMI counts, meta data
+ab11 <- GetAssayData(Cartridge11[["RNA"]], features = ab_name11)
+rna11 <- GetAssayData(Cartridge11[["RNA"]], features = rna_name11)
+# recreate seurat object
+Cartridge11[["RNA"]] <- CreateAssay5Object(counts = rna11)
+Cartridge11[["ADT"]] <- CreateAssay5Object(counts = ab11)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge11 <- subset(Cartridge11, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag09_hs", "SampleTag11_hs", "SampleTag12_hs"), invert = T)
+### Save Cartridge 11 with only called cells from loaded samples
+save(Cartridge11, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge11.Rdata")
+### Filter data for "bad" cells in Cartridge 11
+filtered.car11 <- subset(x = Cartridge11, 
+                         subset = (nFeature_RNA >= 35))
+### Cell number before filtering Cartridge 11
+Cartridge11@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 11
+filtered.car11@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 11
+save(filtered.car11, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car11.Rdata")
+
+### Normalize data in Cartridge 11
+filtered.car11 <- NormalizeData(filtered.car11, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car11, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car11.rds")
+
+# CARTRIDGE 12
+### Update Seurat object, from cartridge 12
+Cartridge12[["RNA"]] <- as(object = Cartridge12[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name12 <- grep("pAbO", rownames(Cartridge12), value = T, ignore.case = T)
+rna_name12 <- rownames(Cartridge12)[-which(rownames(Cartridge12) %in% ab_name12)]
+# get rna and AbSeq UMI counts, meta data
+ab12 <- GetAssayData(Cartridge12[["RNA"]], features = ab_name12)
+rna12 <- GetAssayData(Cartridge12[["RNA"]], features = rna_name12)
+# recreate seurat object
+Cartridge12[["RNA"]] <- CreateAssay5Object(counts = rna12)
+Cartridge12[["ADT"]] <- CreateAssay5Object(counts = ab12)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge12 <- subset(Cartridge12, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag03_hs", "SampleTag02_hs", "SampleTag05_hs", "SampleTag06_hs", "SampleTag07_hs"), invert = T)
+### Save Cartridge 12 with only called cells from loaded samples
+save(Cartridge12, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge12.Rdata")
+### Filter data for "bad" cells in Cartridge 12
+filtered.car12 <- subset(x = Cartridge12, 
+                         subset = (nFeature_RNA >= 40))
+### Cell number before filtering Cartridge 12
+Cartridge12@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 12
+filtered.car12@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 12
+save(filtered.car12, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car12.Rdata")
+### Normalize data in Cartridge 12
+filtered.car12 <- NormalizeData(filtered.car12, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car12, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car12.rds")
+
+# CARTRIDGE 13
+### Update Seurat object, from cartridge 13
+Cartridge13[["RNA"]] <- as(object = Cartridge13[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name13 <- grep("pAbO", rownames(Cartridge13), value = T, ignore.case = T)
+rna_name13 <- rownames(Cartridge13)[-which(rownames(Cartridge13) %in% ab_name13)]
+# get rna and AbSeq UMI counts, meta data
+ab13 <- GetAssayData(Cartridge13[["RNA"]], features = ab_name13)
+rna13 <- GetAssayData(Cartridge13[["RNA"]], features = rna_name13)
+# recreate seurat object
+Cartridge13[["RNA"]] <- CreateAssay5Object(counts = rna13)
+Cartridge13[["ADT"]] <- CreateAssay5Object(counts = ab13)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge13 <- subset(Cartridge13, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag06_hs", "SampleTag07_hs", "SampleTag11_hs"), invert = T)
+### Save Cartridge 13 with only called cells from loaded samples
+save(Cartridge13, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge13.Rdata")
+### Filter data for "bad" cells in Cartridge 13
+filtered.car13 <- subset(x = Cartridge13, 
+                         subset = (nFeature_RNA >= 36))
+### Cell number before filtering Cartridge 13
+Cartridge13@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 13
+filtered.car13@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 13
+save(filtered.car13, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car13.Rdata")
+### Normalize data in Cartridge 13
+filtered.car13 <- NormalizeData(filtered.car13, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car13, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car13.rds")
+
+# CARTRIDGE 14
+### Update Seurat object, from cartridge 14
+Cartridge14[["RNA"]] <- as(object = Cartridge14[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name14 <- grep("pAbO", rownames(Cartridge14), value = T, ignore.case = T)
+rna_name14 <- rownames(Cartridge14)[-which(rownames(Cartridge14) %in% ab_name14)]
+# get rna and AbSeq UMI counts, meta data
+ab14 <- GetAssayData(Cartridge14[["RNA"]], features = ab_name14)
+rna14 <- GetAssayData(Cartridge14[["RNA"]], features = rna_name14)
+# recreate seurat object
+Cartridge14[["RNA"]] <- CreateAssay5Object(counts = rna14)
+Cartridge14[["ADT"]] <- CreateAssay5Object(counts = ab14)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge14 <- subset(Cartridge14, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag02_hs", "SampleTag03_hs", "SampleTag04_hs", "SampleTag11_hs"), invert = T)
+### Save Cartridge 14 with only called cells from loaded samples
+save(Cartridge14, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge14.Rdata")
+### Filter data for "bad" cells in Cartridge 14
+filtered.car14 <- subset(x = Cartridge14, 
+                         subset = (nFeature_RNA >= 37))
+### Cell number before filtering Cartridge 14
+Cartridge14@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 14
+filtered.car14@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 14
+save(filtered.car14, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car14.Rdata")
+### Normalize data in Cartridge 14
+filtered.car14 <- NormalizeData(filtered.car14, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car14, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car14.rds")
+
+# CARTRIDGE 15 
+### Update Seurat object, from cartridge 15
+Cartridge15[["RNA"]] <- as(object = Cartridge15[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name15 <- grep("pAbO", rownames(Cartridge15), value = T, ignore.case = T)
+rna_name15 <- rownames(Cartridge15)[-which(rownames(Cartridge15) %in% ab_name15)]
+# get rna and AbSeq UMI counts, meta data
+ab15 <- GetAssayData(Cartridge15[["RNA"]], features = ab_name15)
+rna15 <- GetAssayData(Cartridge15[["RNA"]], features = rna_name15)
+# recreate seurat object
+Cartridge15[["RNA"]] <- CreateAssay5Object(counts = rna15)
+Cartridge15[["ADT"]] <- CreateAssay5Object(counts = ab15)
+### Remove multiplets, undetermined, not used sampletags
+Cartridge15 <- subset(Cartridge15, subset = Sample_Name %in% c("Multiplet", "Undetermined", "SampleTag01_hs", "SampleTag02_hs", "SampleTag03_hs", "SampleTag04_hs"), invert = T)
+### Save Cartride 15 with only called cells from loaded samples
+save(Cartridge15, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/Cartridge15.Rdata")
+### Filter data for "bad" cells in Cartridge 15
+filtered.car15 <- subset(x = Cartridge15, 
+                         subset = (nFeature_RNA >= 38))
+### Cell number before filtering Cartridge 15
+Cartridge15@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 15
+filtered.car15@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 15
+save(filtered.car15, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car15.Rdata")
+### Normalize data in Cartridge 15
+filtered.car15 <- NormalizeData(filtered.car15, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car15, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car15.rds")
+
+# CARTRIDGE 16 
+### Update Seurat object, from cartridge 16
+Cartridge16[["RNA"]] <- as(object = Cartridge16[["RNA"]], Class = "Assay5") 
+# get bioproduct names for RNA and AbSeq
+ab_name16 <- grep("pAbO", rownames(Cartridge16), value = T, ignore.case = T)
+rna_name16 <- rownames(Cartridge16)[-which(rownames(Cartridge16) %in% ab_name16)]
+# get rna and AbSeq UMI counts, meta data
+ab16 <- GetAssayData(Cartridge16[["RNA"]], features = ab_name16)
+rna16 <- GetAssayData(Cartridge16[["RNA"]], features = rna_name16)
+# recreate seurat object
+Cartridge16[["RNA"]] <- CreateAssay5Object(counts = rna16)
+Cartridge16[["ADT"]] <- CreateAssay5Object(counts = ab16)
+### Filter data for "bad" cells in Cartridge 16
+filtered.car16 <- subset(x = Cartridge16, 
+                         subset = (nFeature_RNA >= 35))
+### Cell number before filtering Cartridge 16
+Cartridge16@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Cell number after filtering Cartridge 16
+filtered.car16@meta.data %>% 
+  group_by(Sample_Name) %>% 
+  dplyr::summarise(cell_number = length(Sample_Name))
+### Save filtered cells from Cartridge 2
+save(filtered.car16, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car16.Rdata")
+### Normalize data in Cartridge 16
+filtered.car16 <- NormalizeData(filtered.car16, 
+                                normalization.method = "LogNormalize")
+### Save the filtered, normalized RSD object for further use
+saveRDS(filtered.car16, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/filtered.car16.rds")
