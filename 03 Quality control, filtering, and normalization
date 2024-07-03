@@ -1,4 +1,4 @@
-# 3.0 Perform quality control of data, filtering, and normalization
+# 3.0 Perform quality control of data, filtering, and normalization for all Seurat files from each cartridges
 
 # CARTRIDGE 1 
 ### Update Seurat object, from cartridge 1
