@@ -1,1 +1,132 @@
 ## 05 Multimodal analysis
+
+# Label all the cells from the different samples to the conditions
+merged@meta.data %>%
+  mutate(Condition = case_when(Sample_Name == "003B" ~ "BASELINE",
+                               Sample_Name == "001_6M" ~ "6M",
+                               Sample_Name == "003_6M" ~ "6M",
+                               Sample_Name == "P006_6M" ~ "6M",
+                               Sample_Name == "P016_BASE" ~ "BASELINE",
+                               Sample_Name == "P003_8M" ~ "8M",
+                               Sample_Name == "P018_BASE" ~ "BASELINE",
+                               Sample_Name == "P009_3W" ~ "3W",
+                               Sample_Name == "P006_3W" ~ "3W",
+                               Sample_Name == "P008_BASE" ~ "BASELINE",
+                               Sample_Name == "001_BASE" ~ "BASELINE",
+                               Sample_Name == "P008_3W" ~ "3W",
+                               Sample_Name == "P003_3W" ~ "3W",
+                               Sample_Name == "P001_3W" ~ "3W",
+                               Sample_Name == "P004_3W" ~ "3W",
+                               Sample_Name == "P015_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P004_6M" ~ "6M",
+                               Sample_Name == "P013_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P014_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P008_6M" ~ "6M",
+                               Sample_Name == "P001_8M" ~ "8M",
+                               Sample_Name == "P009_6M" ~ "6M",
+                               Sample_Name == "HC001" ~ "HC",
+                               Sample_Name == "P009_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P008_8M" ~ "8M",
+                               Sample_Name == "P004_8M" ~ "8M",
+                               Sample_Name == "P021_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P006_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P018_3W" ~ "3W",
+                               Sample_Name == "P011_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P006_8M" ~ "8M",
+                               Sample_Name == "P018_8M" ~ "8M",
+                               Sample_Name == "P025_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P012_3W" ~ "3W",
+                               Sample_Name == "HC004" ~ "HC",
+                               Sample_Name == "HC005" ~ "HC",
+                               Sample_Name == "P024_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P023_3W" ~ "3W",
+                               Sample_Name == "P023_6M" ~ "6M",
+                               Sample_Name == "P021_8M" ~ "8M",
+                               Sample_Name == "P022_8M" ~ "8M",
+                               Sample_Name == "HC008" ~ "HC",
+                               Sample_Name == "P009_8M" ~ "8M",
+                               Sample_Name == "P022_BASELINE" ~ "BASELINE",
+                               Sample_Name == "HC010" ~ "HC",
+                               Sample_Name == "P012_8M" ~ "8M",
+                               Sample_Name == "P022_6M" ~ "6M",
+                               Sample_Name == "P022_3W" ~ "3W",
+                               Sample_Name == "P026_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P012_6M" ~ "6M",
+                               Sample_Name == "P023_BASELINE" ~ "BASELINE",
+                               Sample_Name == "HC003" ~ "HC",
+                               Sample_Name == "P021_3W" ~ "3W",
+                               Sample_Name == "HC002" ~ "HC",
+                               Sample_Name == "P012_BASELINE" ~ "BASELINE",
+                               Sample_Name == "P021_6M" ~ "6M",
+                               Sample_Name == "HC009" ~ "HC",
+                               Sample_Name == "HC007" ~ "HC",
+                               Sample_Name == "HC006" ~ "HC",
+                               Sample_Name == "HC011" ~ "HC",
+                               Sample_Name == "P025_6M" ~ "6M",
+                               Sample_Name == "P023_8M" ~ "8M",
+                               Sample_Name == "P018_6M" ~ "6M")) %>%
+  AddMetaData(object=merged, metadata=.)-> merged
+unique(merged@meta.data$Condition)
+
+
+### 4.0 Multimodal analysis - WNN
+
+merged <- FindMultiModalNeighbors(
+  merged, reduction.list = list("pca", "apca"), 
+  dims.list = list(1:30, 1:18), modality.weight.name = "RNA.weight"
+)
+# Run UMAP and find clusters
+merged <- RunUMAP(merged, nn.name = "weighted.nn", 
+                  reduction.name = "wnn.umap", 
+                  reduction.key = "wnnUMAP_")
+merged <- FindClusters(merged, graph.name = "wsnn", 
+                       algorithm = 3, 
+                       resolution = 2, # Big resolution, a lot of clusters
+                       verbose = FALSE)
+# look at the data and the UMAP and the clusters
+DimPlot(merged, reduction = 'wnn.umap', 
+        label = TRUE, repel = TRUE, 
+        label.size = 2.5) + NoLegend()
+# Run UMAP on RNA data (pca), ADT data (apca), and also harmony-integrated data (integrated.harmony)
+merged <- RunUMAP(merged, reduction = 'pca', dims = 1:30, assay = 'RNA', 
+                  reduction.name = 'rna.umap', reduction.key = 'rnaUMAP_')
+merged <- RunUMAP(merged, reduction = 'integrated.harmony', dims = 1:30, assay = 'RNA', 
+                  reduction.name = 'rna.umap.harmony', reduction.key = 'rnaUMAPharmony_')
+merged <- RunUMAP(merged, reduction = 'apca', dims = 1:18, assay = 'ADT', 
+                  reduction.name = 'adt.umap', reduction.key = 'adtUMAP_')
+Idents(merged) <- "Cell_Type_Experimental"
+DimPlot(merged, reduction = 'rna.umap', 
+              group.by = 'Cell_Type_Experimental', 
+              label = TRUE, 
+              repel = TRUE, 
+              label.size = 2.5) + NoLegend()
+DimPlot(merged, reduction = 'rna.umap.harmony', 
+              group.by = 'Cell_Type_Experimental', 
+              label = TRUE, 
+              repel = TRUE, 
+              label.size = 2.5) + NoLegend()
+DimPlot(merged, reduction = 'adt.umap', 
+              group.by = 'Cell_Type_Experimental', 
+              label = TRUE, 
+              repel = TRUE, 
+              label.size = 2.5) + NoLegend()
+DimPlot(merged, reduction = 'wnn.umap', 
+              group.by = 'Cell_Type_Experimental', 
+              label = TRUE, 
+              repel = TRUE, 
+              label.size = 2.5) + NoLegend()
+
+## Again, it is clear there is no big difference between unintergrated and harmony intergrated RNA data,
+## The integration of RNA data and ADT data with MultiModal analysis makes a better separation of the clusters
+
+# find clusters of WNN analysis with other resolutions
+merged <- FindClusters(merged, graph.name = "wsnn", 
+                       algorithm = 3, 
+                       resolution = c(0.2, 0.4, 0.6,  0.8, 1, 1.2, 1.4), 
+                       verbose = FALSE)
+# see how many clusters the different resolutions have
+merge@meta.data %>% 
+  dplyr::select(contains("wsnn")) %>% 
+  map_int(~ unique(.x) %>% length)
+#see the cluster tree and how it change upon different resolutions.
+#based on our data the best resolution was decided to be 0.4 
