@@ -1,2 +1,122 @@
-# 3.0 Merge, normalization, scaling, PCA, etc.
+#04 Merge, normalization, scaling, PCA, etc.
 #see whether integration for batch effect correction is needed
+
+# Import data from 03
+f.car1 <- readRDS("filtered.car1.rds")
+f.car2 <- readRDS("filtered.car2.rds")
+f.car3 <- readRDS("filtered.car3.rds")
+f.car4 <- readRDS("filtered.car4.rds")
+f.car5 <- readRDS("filtered.car5.rds")
+f.car6 <- readRDS("filtered.car6.rds")
+f.car7 <- readRDS("filtered.car7.rds")
+f.car8 <- readRDS("filtered.car8.rds")
+f.car9 <- readRDS("filtered.car9.rds")
+f.car10 <- readRDS("filtered.car10.rds")
+f.car11 <- readRDS("filtered.car11.rds")
+f.car12 <- readRDS("filtered.car12.rds")
+f.car13 <- readRDS("filtered.car13.rds")
+f.car14 <- readRDS("filtered.car14.rds")
+f.car15 <- readRDS("filtered.car15.rds")
+f.car16 <- readRDS("filtered.car16.rds")
+
+## Split cartridges into individual samples before merging the cartridges
+f.car1[["RNA"]] <- split(f.car1[["RNA"]], f = f.car1$Sample_Name)
+f.car2[["RNA"]] <- split(f.car2[["RNA"]], f = f.car2$Sample_Name)
+f.car3[["RNA"]] <- split(f.car3[["RNA"]], f = f.car3$Sample_Name)
+f.car4[["RNA"]] <- split(f.car4[["RNA"]], f = f.car4$Sample_Name)
+f.car5[["RNA"]] <- split(f.car5[["RNA"]], f = f.car5$Sample_Name)
+f.car6[["RNA"]] <- split(f.car6[["RNA"]], f = f.car6$Sample_Name)
+f.car7[["RNA"]] <- split(f.car7[["RNA"]], f = f.car7$Sample_Name)
+f.car8[["RNA"]] <- split(f.car8[["RNA"]], f = f.car8$Sample_Name)
+f.car9[["RNA"]] <- split(f.car9[["RNA"]], f = f.car9$Sample_Name)
+f.car10[["RNA"]] <- split(f.car10[["RNA"]], f = f.car10$Sample_Name)
+f.car11[["RNA"]] <- split(f.car11[["RNA"]], f = f.car11$Sample_Name)
+f.car12[["RNA"]] <- split(f.car12[["RNA"]], f = f.car12$Sample_Name)
+f.car13[["RNA"]] <- split(f.car13[["RNA"]], f = f.car13$Sample_Name)
+f.car14[["RNA"]] <- split(f.car14[["RNA"]], f = f.car14$Sample_Name)
+f.car15[["RNA"]] <- split(f.car15[["RNA"]], f = f.car15$Sample_Name)
+f.car16[["RNA"]] <- split(f.car16[["RNA"]], f = f.car16$Sample_Name)
+
+## Merge the splitted cartridges
+f.car123 <- merge(f.car1, y = c(f.car2, f.car3, f.car4, f.car5, f.car6, f.car7, f.car8, f.car9, 
+                                f.car10, f.car11, f.car12, f.car13, f.car14, f.car15, f.car16), 
+                  add.cell.ids = c("C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
+                                   "C10", "C11", "C12", "C13", "C14", "C15", "C16"), project = "C123", merge.data =TRUE)
+## Save the merged data
+saveRDS(f.car123, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/mergeddata.rds")
+merged.car <- readRDS("mergeddata.rds")
+
+## Exclude P004 baseline sample ... not good quality. Verified with flow cytometry and in vitro studies
+merged.car <- subset(merged.car, subset = Sample_Name == "004_B", invert = T)
+
+## Work on RNA data first
+DefaultAssay(merged.car) <- "RNA"
+## Normalize data
+merged.car <- NormalizeData(merged.car)
+# Identify highly variable features (genes) in a Seurat object using the vst-method
+merged.car <- FindVariableFeatures(merged.car)
+# Scale data to normalize the expression values of each gene across cells to make the comparable
+merged.car <- ScaleData(merged.car)
+# Find principal components for dimensional reduction
+merged.car <- RunPCA(merged.car)
+# Calculation of shared nearest neighbor (SNN) using the first 30 PC's to find similarities between cells
+merged.car <- FindNeighbors(merged.car, dims = 1:30, reduction = "pca")
+# Find the clusters based on the SNN calculations above
+merged.car <- FindClusters(merged.car, resolution = 2, cluster.name = "unintegrated_clusters")
+# Calculation of UMAP coordinates to make visualizations of the data
+merged.car <- RunUMAP(merged.car, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
+# Visualize by batch and cell type annotation (were previously added within SB)
+DimPlot(merged.car, reduction = "umap.unintegrated", 
+        group.by = "Cell_Type_Experimental",
+        label = FALSE, 
+        repel = TRUE, 
+        label.size = 2.5,
+        cols = colorspace::rainbow_hcl(10)) + ggtitle("All samples, RNA data, unintegrated")
+###
+DimPlot(merged.car, reduction = "umap.unintegrated", 
+        group.by = "Sample_Name",
+        label = FALSE, 
+        repel = TRUE, 
+        label.size = 2.5,
+        cols = colorspace::rainbow_hcl(10)) + ggtitle("All samples, RNA data, unintegrated")
+## Save the merged data with normalization, scaling
+saveRDS(merged.car, file = "C:/Users/mwaede/Research team Dropbox/Zsolt_Illes_group/Projects/DanNORMS/Results/Rhapsody - scCapture and scSequencing/Data analysis/merged.norm.scaled.data.rds")
+
+## Use integration method Harmony
+merged.car <- IntegrateLayers(
+  object = merged.car, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.harmony",
+  verbose = FALSE
+)
+# save the harmony integrated data as well
+saveRDS(merged.car, file = "/work/Rhapsody data/merged.int.data.rds")
+
+
+# Performing the same analysis on integrated data
+merged.car <- FindNeighbors(merged.car, reduction = "integrated.harmony", dims = 1:30)
+merged.car <- FindClusters(merged.car, resolution = 2, cluster.name = "harmony_clusters")
+merged.car <- RunUMAP(merged.car, reduction = "integrated.harmony", dims = 1:30, reduction.name = "umap.harmony")
+# save the harmony integrated data as well
+saveRDS(merged.car, file = "/work/Rhapsody data/merged.int.umap.data.rds")
+# Plot the UMAP calcluated on the harmony integration
+DimPlot(
+  merged.car,
+  reduction = "umap.harmony",
+  group.by = c("Sample_Name"),
+  combine = FALSE, label.size = 0.2
+)
+DimPlot(
+  merged.car,
+  reduction = "umap.harmony",
+  group.by = c("Cell_Type_Experimental"),
+  combine = FALSE, label.size = 0.5
+)
+DimPlot(
+  merged.car,
+  reduction = "umap.harmony",
+  group.by = c("harmony_clusters"),
+  combine = FALSE, label.size = 0.5
+)
+
+## Based on the analysis of the unintegrated (not batch-effect-corrected) data and the integrated data, there is no big difference, 
+# and we assume that the small differences are due to biological, individual, natural differences, and we will use unintegrated (not batch-effect-correct) data
