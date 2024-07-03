@@ -120,3 +120,34 @@ DimPlot(
 
 ## Based on the analysis of the unintegrated (not batch-effect-corrected) data and the integrated data, there is no big difference, 
 # and we assume that the small differences are due to biological, individual, natural differences, and we will use unintegrated (not batch-effect-correct) data
+
+## Do the normalization, scaling, PCA on the ADT data!!
+# Read the saved file from above
+merged <- readRDS("merged.int.umap.data.rds")
+# Change data to ADT
+DefaultAssay(merged) <- "ADT"
+# we will use all ADT features for dimensional reduction
+# we set a dimensional reduction name to avoid overwriting the 
+VariableFeatures(merged) <- rownames(merged[["ADT"]])
+merged <- NormalizeData(merged, normalization.method = 'CLR', margin = 2) %>% 
+  ScaleData() %>% RunPCA(reduction.name = 'apca')
+# Calculation of shared nearest neighbor (SNN) using the first 10 PC's to find similarities between cells
+merged <- FindNeighbors(merged, dims = 1:18, reduction = "apca")
+# Find the clusters based on the SNN calculations above
+merged <- FindClusters(merged, resolution = 2, cluster.name = "unintegrated_clusters_ADT")
+# Calculation of UMAP coordinates to make visualizations of the data
+merged <- RunUMAP(merged, dims = 1:18, reduction = "apca", reduction.name = "umap.unintegrated_ADT")
+# Visualize by batch and cell type annotation (were previously added within SB)
+DimPlot(merged, reduction = "umap.unintegrated_ADT", group.by = c("Cell_Type_Experimental"))
+saveRDS(merged, file = "RNA_ADT.rds")
+merged <- readRDS("RNA_ADT.rds")
+DimPlot(merged, reduction = "umap.unintegrated_ADT", 
+        group.by = "Cell_Type_Experimental",
+        label = FALSE, 
+        repel = TRUE, 
+        label.size = 2.5,
+        cols = colorspace::rainbow_hcl(10)) + ggtitle("All samples, ADT data, unintegrated")
+
+# Join layers again
+merged <- JoinLayers(merged)
+saveRDS(merged, file = "allcartridges.rds")
