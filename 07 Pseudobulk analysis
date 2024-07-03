@@ -1,0 +1,60 @@
+### 07  Pseudobulk analysis
+
+# Read the file again
+merged <- readRDS("WNN_unint_RNA_ADT_21052024.rds")
+# See the unique clusters
+merged$MarkerBasedAnnotation %>% unique()
+# Set the factor levels in the following order
+merged$Condition <- factor(merged$Condition, levels = c("HC", "BASELINE", "3W", "6M", "8M"))
+
+# Aggregate expression for pseudobulk including Condition, Sample Name (sample), Cell type (MarkerBasedAnnotation), within the aggregation
+pseudo <- AggregateExpression(merged, 
+                              assays = "RNA",
+                              return.seurat = TRUE,
+                              group.by = c("Condition", "Sample_Name", "MarkerBasedAnnotation"))
+# here the cell expressions are aggregated
+tail(Cells(pseudo))
+# here we make a new column that are based on the cell type (MarkerBasedAnnotation) and the Condition within both merged and pseudo
+pseudo$celltype.condition <- paste(pseudo$MarkerBasedAnnotation, pseudo$Condition, sep = ".")
+merged$celltype.condition <- paste(merged$MarkerBasedAnnotation, merged$Condition, sep = ".")
+# create a new column based on the Condition 
+merged$sample.condition <- paste(merged$Sample_Name, merged$Condition, sep = ".")
+# change the Idents to the new group
+Idents(pseudo) <- "celltype.condition"
+
+# now perform DESeq2 on different cells and conditions making a loop
+
+# First see and define the cell type for analysis
+merged@meta.data[["MarkerBasedAnnotation"]] %>% unique()
+
+# Below an example with "Progenitor cells" are shown. The code is changes for all the unique() cell types
+
+cell_type <- "Progenitor cells"
+# Get unique conditions
+conditions <- unique(pseudo$Condition)
+# Define an empty list to store the results
+results_list <- list()
+# Loop over each pair of conditions
+for (i in 1:(length(conditions) - 1)) {
+  for (j in (i + 1):length(conditions)) {
+    # Define identifiers for comparison
+    ident_1 <- paste(cell_type, conditions[i], sep = ".")
+    ident_2 <- paste(cell_type, conditions[j], sep = ".")
+    
+    # Perform differential expression analysis
+    results <- FindMarkers(object = pseudo,
+                           ident.1 = ident_1,
+                           ident.2 = ident_2,
+                           test.use = "DESeq2")
+    
+    # Store the results in the list
+    results_list[[paste(ident_1, "vs.", ident_2, sep = ".")]] <- results
+  }
+}
+
+# Save the results as Excel files
+for (k in seq_along(results_list)) {
+  result <- results_list[[k]]
+  filename <- paste(names(results_list)[k], ".xlsx", sep = "")
+  write.xlsx(result, file.path(table.dir, filename), rowNames = TRUE)
+}
