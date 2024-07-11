@@ -41,4 +41,22 @@ ggplot(volcano_data, aes(x = avg_log2FC, y = log_p_value)) +
                   point.padding = 0.2,
                   max.overlaps = Inf) # Add gene labels
 
-#
+#Violin Plots
+VlnPlot(merged, features = genes_of_interest,
+        assay = "RNA",
+        idents = ("Cell_type_of_interest"), 
+        group.by = "Condition_of_interest", pt.size = 0.05,
+        cols = colorspace::rainbow_hcl(5)) + ggtitle("Relevant title")
+
+#Dim Plots
+DimPlot(merged,
+        reduction = "wnn.umap",
+        group.by = c("MarkerBasedAnnotation"),
+        label = TRUE,
+        label.size = 0,
+        cols = colorspace::rainbow_hcl(23)) + NoLegend() + 
+  ggtitle("WNN UMAP COMPLETE") + xlab("wnn.UMAP_1") + ylab("wnn.UMAP_2") 
+
+#Feature Plots
+FeaturePlot(merged, features = "CD56:NCAM16.2-NCAM1-AHS0019-pAbO", reduction = 'wnn.umap',
+            min.cutoff = 'q10', max.cutoff = 'q99', cols = c("blue", "yellow"))
