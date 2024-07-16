@@ -58,3 +58,9 @@ for (k in seq_along(results_list)) {
   filename <- paste(names(results_list)[k], ".xlsx", sep = "")
   write.xlsx(result, file.path(table.dir, filename), rowNames = TRUE)
 }
+
+# same analysis is performed on ADT data
+pseudo <- AggregateExpression(merged, 
+                              assays = "ADT",
+                              return.seurat = TRUE,
+                              group.by = c("Condition", "Sample_Name", "MarkerBasedAnnotation"))
