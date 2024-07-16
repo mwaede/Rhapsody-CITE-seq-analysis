@@ -1,0 +1,113 @@
+merged <- readRDS("merged15072024_3.rds")
+Idents(merged) <- "MarkerBasedAnnotation"
+
+### Bar plot of proportion of cells for each condition
+# Extract metadata
+meta_data <- merged@meta.data
+
+# Calculate cell type counts for each condition
+cell_type_counts <- meta_data %>%
+  group_by(Condition, MarkerBasedAnnotation) %>%
+  summarize(count = n())
+
+# Create a contingency table
+contingency_table <- table(meta_data$Condition, meta_data$MarkerBasedAnnotation)
+
+# View the contingency table
+print(contingency_table)
+
+# Perform proportion test for each cell type
+results <- list()
+for (MarkerBasedAnnotation in colnames(contingency_table)) {
+  counts <- contingency_table[, MarkerBasedAnnotation]
+  total <- rowSums(contingency_table)
+  results[[MarkerBasedAnnotation]] <- prop.test(counts, total)
+}
+
+# View results for a specific cell type
+print(results[[1]])
+
+# Prepare data for plotting
+plot_data <- cell_type_counts %>%
+  mutate(MarkerBasedAnnotation = factor(MarkerBasedAnnotation, levels = unique(MarkerBasedAnnotation)))
+
+# Define a color palette with more distinct colors
+num_colors <- length(unique(plot_data$MarkerBasedAnnotation))
+color_palette <- color_palette <- viridis(num_colors)
+
+# Plot cell type proportions
+ggplot(plot_data, aes(x = Condition, y = count, fill = MarkerBasedAnnotation)) +
+  geom_bar(stat = "identity", position = "fill") +
+  theme_minimal() +
+  scale_fill_manual(values = colot_palette) +
+  labs(y = "Proportion", fill = "Cell Type") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+########Test of differences between cell types and conditions with Fisher test and multiple comparison correction
+# Extract metadata
+meta_data <- merged@meta.data
+
+# Calculate cell type counts for each condition
+cell_type_counts <- meta_data %>%
+  group_by(Condition, MarkerBasedAnnotation) %>%
+  summarize(count = n(), .groups = 'drop')
+
+# Create a contingency table
+contingency_table <- table(meta_data$Condition, meta_data$MarkerBasedAnnotation)
+
+# View the contingency table
+print(contingency_table)
+
+# Get all unique conditions and cell types
+conditions <- unique(meta_data$Condition)
+cell_types <- unique(meta_data$MarkerBasedAnnotation)
+
+# Initialize list to store results
+results <- list()
+
+# Perform pairwise proportion tests using Fisher's exact test
+for (cell_type in cell_types) {
+  for (i in 1:(length(conditions) - 1)) {
+    for (j in (i + 1):length(conditions)) {
+      condition1 <- conditions[i]
+      condition2 <- conditions[j]
+      
+      # Get counts for the cell type in both conditions
+      counts1 <- contingency_table[condition1, cell_type]
+      counts2 <- contingency_table[condition2, cell_type]
+      
+      # Get total counts for both conditions
+      total1 <- sum(contingency_table[condition1, ])
+      total2 <- sum(contingency_table[condition2, ])
+      
+      # Perform Fisher's exact test
+      test_result <- fisher.test(matrix(c(counts1, total1 - counts1, counts2, total2 - counts2), nrow = 2))
+      
+      # Store results
+      results[[paste(cell_type, condition1, condition2, sep = "_")]] <- data.frame(
+        cell_type = cell_type,
+        condition1 = condition1,
+        condition2 = condition2,
+        counts1 = counts1,
+        counts2 = counts2,
+        total1 = total1,
+        total2 = total2,
+        p_value = test_result$p.value,
+        estimate = ifelse(length(test_result$estimate) > 0, test_result$estimate, NA)
+      )
+    }
+  }
+}
+
+# Combine all results into a single data frame
+all_results <- do.call(rbind, results)
+
+# Adjust p-values for multiple comparisons using the Benjamini-Hochberg method
+all_results$adjusted_p_value <- p.adjust(all_results$p_value, method = "BH")
+
+# Save results to an Excel file
+write_xlsx(all_results, "pairwise_proportion_test_results.multiplecomparison.xlsx")
+
+# View a snippet of the results
+head(all_results)
