@@ -1,1 +1,5 @@
 # Convert SeuratObject into AnnData object
+# Create a temporary h5seurat file
+SaveH5Seurat(merged, filename = "merged.h5Seurat")
+# Convert the h5seurat file into an AnnData file (.h5ad)
+Convert("merged.h5Seurat", dest = "h5ad")
