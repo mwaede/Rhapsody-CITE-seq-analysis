@@ -35,13 +35,23 @@ plot_data <- cell_type_counts %>%
 num_colors <- length(unique(plot_data$MarkerBasedAnnotation))
 color_palette <- color_palette <- viridis(num_colors)
 
-# Plot cell type proportions
-ggplot(plot_data, aes(x = Condition, y = count, fill = MarkerBasedAnnotation)) +
-  geom_bar(stat = "identity", position = "fill") +
+# Transform the data to fit the requirements of ggalluvial
+plot_data <- plot_data %>%
+  group_by(Condition) %>%
+  mutate(proportion = count / sum(count))
+
+# Create the alluvial plot
+ggplot(plot_data,
+       aes(x = Condition, stratum = MarkerBasedAnnotation, alluvium = MarkerBasedAnnotation,
+           y = proportion,
+           fill = MarkerBasedAnnotation, label = MarkerBasedAnnotation)) +
+  scale_x_discrete(expand = c(.5, .1)) +
+  geom_flow(stat = "alluvium", lode.guidance = "rightleft", color = "darkgray") +
+  geom_stratum(alpha = .9) +
   theme_minimal() +
-  scale_fill_manual(values = colot_palette) +
+  theme(legend.position = "right") +
   labs(y = "Proportion", fill = "Cell Type") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  ggtitle("Cell Type Proportions Across Conditions") + NoLegend()
 
 
 ########Test of differences between cell types and conditions with Fisher test and multiple comparison correction
