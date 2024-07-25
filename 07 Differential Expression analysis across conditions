@@ -1,0 +1,42 @@
+#Volcano plot comparing conditions
+# Ensure the object is set up correctly
+Idents(merged) <- "Condition"
+
+# Perform differential expression analysis with Wilcoxon test (default)
+HCvsB <- FindMarkers(merged, ident.1 = "HC", ident.2 = "BASELINE")
+
+# Check the results
+head(HCvsB)
+
+# Prepare the data for the volcano plot
+volcano_data <- HCvsB %>%
+  rownames_to_column(var = "gene") %>%
+  mutate(log_p_value = -log10(p_val_adj))
+
+# Set a ceiling for the -log10(p_val_adj) values
+ceiling_value <- 300
+volcano_data <- volcano_data %>%
+  mutate(log_p_value = ifelse(log_p_value > ceiling_value, ceiling_value, log_p_value))
+
+# Filter for the top 10 most significant genes with log2FC > 1
+top_genes <- volcano_data %>%
+  filter(avg_log2FC > 2) %>%
+  arrange(p_val_adj) %>%
+  slice_head(n = 10)
+
+# Plot the volcano plot
+ggplot(volcano_data, aes(x = avg_log2FC, y = log_p_value)) +
+  geom_point(aes(color = log_p_value > -log10(0.05) & abs(avg_log2FC) > 0.25), size = 1) +
+  scale_color_manual(values = c("grey", "red")) +
+  labs(title = "Volcano Plot: HC vs BASELINE",
+       x = "Log2 Fold Change",
+       y = "-Log10 Adjusted P-Value",
+       color = "Significance") +
+  theme_minimal() +
+  coord_cartesian(ylim = c(0, ceiling_value)) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "blue") + # Add significance threshold line
+  geom_text_repel(data = top_genes, aes(label = gene), 
+                  size = 3, 
+                  box.padding = 0.3, 
+                  point.padding = 0.2,
+                  max.overlaps = Inf) # Add gene labels
