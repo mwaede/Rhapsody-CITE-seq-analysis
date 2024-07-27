@@ -17,3 +17,13 @@ DimPlot(merged,
 #Feature Plots
 FeaturePlot(merged, features = "CD56:NCAM16.2-NCAM1-AHS0019-pAbO", reduction = 'wnn.umap',
             min.cutoff = 'q10', max.cutoff = 'q99', cols = c("blue", "yellow"))
+
+#Dot plots
+DotPlot(merged, group.by = "MarkerBasedAnnotation",
+        features = ordered_genes,
+        assay = "RNA",
+        col.min = -5,
+        col.max = 5,
+        dot.scale = 5,
+        cluster.idents = FALSE,
+        cols = c("yellow", "blue")) + RotatedAxis()
