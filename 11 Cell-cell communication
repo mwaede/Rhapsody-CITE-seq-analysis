@@ -1,0 +1,183 @@
+Idents(merged) <- "MarkerBasedAnnotation"
+
+## HC
+HC <- subset(merged, subset = Condition == "HC")
+
+liana_test <- liana_wrap(HC)
+liana_test %>% dplyr::glimpse()
+liana_test <- liana_test %>%
+  liana_aggregate()
+dplyr::glimpse(liana_test)
+liana_test %>%
+  liana_dotplot(source_groups = c("IL1Bhigh monocytes"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                ntop = 20) + 
+  RotatedAxis() + theme(axis.text.x = element_text(size = 10)) + 
+  theme(axis.text.y = element_text(size = 10)) + ggtitle("HC samples")
+
+liana_trunc <- liana_test %>%
+  # only keep interactions concordant between methods
+  filter(aggregate_rank <= 0.01) # note that these pvals are already corrected
+
+heat_freq(liana_trunc)
+
+p <- chord_freq(liana_trunc,
+                source_groups = NULL,
+                target_groups = NULL,
+                cex = 0,
+                adj = c(-1, 0.5))
+
+## BASELINE
+BASELINE <- subset(merged, subset = Condition == "BASELINE")
+
+liana_test_base <- liana_wrap(BASELINE)
+liana_test_base %>% dplyr::glimpse()
+liana_test_base <- liana_test_base %>%
+  liana_aggregate()
+dplyr::glimpse(liana_test_base)
+liana_test_base %>%
+  liana_dotplot(source_groups = c("IL1Bhigh monocytes"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                ntop = 20) + 
+  RotatedAxis() + theme(axis.text.x = element_text(size = 10)) + 
+  theme(axis.text.y = element_text(size = 10)) + ggtitle("Baseline samples")
+
+liana_trunc_base <- liana_test_base %>%
+  # only keep interactions concordant between methods
+  filter(aggregate_rank <= 0.01) # note that these pvals are already corrected
+
+heat_freq(liana_trunc_base)
+
+p <- chord_freq(liana_trunc_base,
+                source_groups = NULL,
+                target_groups = NULL,
+                cex = 0.5,
+                adj = c(-0.05, 0.05))
+
+
+# ACUTE
+ACUTE <- subset(merged, subset = Condition == "3W")
+
+
+liana_test_acute <- liana_wrap(ACUTE)
+liana_test_acute %>% dplyr::glimpse()
+liana_test_acute <- liana_test_acute %>%
+  liana_aggregate()
+dplyr::glimpse(liana_test_acute)
+liana_test_acute %>%
+  liana_dotplot(source_groups = c("IL1Bhigh monocytes"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                ntop = 20) + 
+  RotatedAxis() + theme(axis.text.x = element_text(size = 10)) + 
+  theme(axis.text.y = element_text(size = 10)) + ggtitle("Acute samples")
+
+
+liana_trunc_acute <- liana_test_acute %>%
+  # only keep interactions concordant between methods
+  filter(aggregate_rank <= 0.01) # note that these pvals are already corrected
+
+heat_freq(liana_trunc_acute)
+
+p <- chord_freq(liana_trunc_acute,
+                source_groups = NULL,
+                target_groups = NULL,
+                cex = 0,
+                adj = c(-1, 0.5))
+
+
+# Recovery
+RECOVERY <- subset(merged, subset = Condition == "6M")
+
+liana_test_recovery <- liana_wrap(RECOVERY)
+liana_test_recovery %>% dplyr::glimpse()
+liana_test_recovery <- liana_test_recovery %>%
+  liana_aggregate()
+dplyr::glimpse(liana_test_recovery)
+liana_test_recovery %>%
+  liana_dotplot(source_groups = c("IL1Bhigh monocytes"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                ntop = 20) + 
+  RotatedAxis() + theme(axis.text.x = element_text(size = 10)) + 
+  theme(axis.text.y = element_text(size = 10)) + ggtitle("Recovery samples")
+
+liana_trunc_recovery <- liana_test_recovery %>%
+  # only keep interactions concordant between methods
+  filter(aggregate_rank <= 0.01) # note that these pvals are already corrected
+
+heat_freq(liana_trunc_recovery)
+
+p <- chord_freq(liana_trunc_recovery,
+                source_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"))
+
+
+# Complete
+COMPLETE <- subset(merged, subset = Condition == "8M")
+
+
+liana_test_complete <- liana_wrap(COMPLETE)
+liana_test_complete %>% dplyr::glimpse()
+liana_test_complete <- liana_test_complete %>%
+  liana_aggregate()
+dplyr::glimpse(liana_test_complete)
+liana_test_complete %>%
+  liana_dotplot(source_groups = c("IL1Bhigh monocytes"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                ntop = 20) + 
+  RotatedAxis() + theme(axis.text.x = element_text(size = 10)) + 
+  theme(axis.text.y = element_text(size = 10)) + ggtitle("Complete samples")
+
+liana_trunc_complete <- liana_test_complete %>%
+  # only keep interactions concordant between methods
+  filter(aggregate_rank <= 0.01) # note that these pvals are already corrected
+
+heat_freq(liana_trunc_complete)
+
+p <- chord_freq(liana_trunc_complete,
+                source_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"),
+                target_groups = c("Intermediate", "Proliferating cells", "Plasma B cells", "Naive CD8+", "Memory CD4+", 
+                                  "Memory CD8+","Naive B cells",
+                                  "Effector CD8+", "IL1Bhigh monocytes", "CD8+ NKT", "CD4+ NKT", "mDCs",
+                                  "CD56dim NKT", "Cytolytic CD4+", "Classical Monocytes", "NK cells", "Naive CD4+",
+                                  "Non-classical", "pDCs", "NKT", "Progenitor cells","Effector CD4+",
+                                  "Memory B cells"))
