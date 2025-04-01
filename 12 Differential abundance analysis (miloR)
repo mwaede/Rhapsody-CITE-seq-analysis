@@ -1,0 +1,86 @@
+library(miloR)
+library(scater)
+
+# Load the Seurat object
+merged <- readRDS("merged19072024_5.rds")
+
+# Choose which conditions to compare (Change this for different comparisons)
+conditions_to_keep <- c("HC", "BASELINE")  # Change this to c("HC", "BASELINE") for the other comparison
+
+# Subset Seurat object
+merged_subset <- subset(merged, subset = Condition %in% conditions_to_keep)
+
+# Convert Seurat object to SingleCellExperiment
+sce <- as.SingleCellExperiment(merged_subset)
+
+# Create Milo object from the SingleCellExperiment
+milo <- Milo(sce)
+milo
+
+# Construct KNN graph
+traj_milo <- buildGraph(milo, k = 30, d = 20) 
+
+# Define representative neighborhoods, use same k and d
+traj_milo <- makeNhoods(traj_milo, prop = 0.1, k = 30, d = 20, refined = TRUE)
+
+#Look at the neighborhoods
+plotNhoodSizeHist(traj_milo)
+#if the neighborhood size distribution is about 50-100 it is good
+#if the distribution is lower then increase k and redo makeNhoods()
+#each cell is connected to neighbors, and when increasing k each cell is connected to more neighbors
+
+# Assign experimental conditions
+traj_milo$condition <- merged_subset$Condition  
+traj_milo$sample <- merged_subset$Sample_Name
+
+# Counting neighbors
+traj_milo <- countCells(traj_milo, meta.data = colData(traj_milo), sample = "sample")
+
+# Ensure condition is a factor
+traj_milo$condition <- factor(traj_milo$condition, levels = conditions_to_keep)
+
+# Create design matrix
+traj_design <- data.frame(colData(traj_milo))[, c("sample", "condition")]
+traj_design <- distinct(traj_design)
+rownames(traj_design) <- traj_design$sample
+traj_design <- traj_design[colnames(nhoodCounts(traj_milo)), , drop=FALSE]
+
+# Store distances
+traj_milo <- calcNhoodDistance(traj_milo, d = 20)
+
+# Perform differential abundance testing
+da_results <- testNhoods(traj_milo, 
+                         design = ~ condition, 
+                         design.df = traj_design)
+
+levels(traj_milo$condition)
+
+# Visualizations
+traj_milo <- buildNhoodGraph(traj_milo)
+
+# Extract UMAP coordinates from Seurat object
+umap_coords <- Embeddings(merged, reduction = "wnn.umap")  
+
+# Ensure rownames match the cells in traj_milo
+umap_coords <- umap_coords[colnames(traj_milo), ]  
+
+# Assign UMAP coordinates to Milo object
+reducedDim(traj_milo, "UMAP") <- umap_coords
+
+# UMAP plot of milo analysis
+plotUMAP(traj_milo) + plotNhoodGraphDA(traj_milo, da_results, alpha = 0.05) +
+  plot_layout(guides = "collect")
+
+# P values plotted
+ggplot(da_results, aes(PValue)) + geom_histogram(bins=50)
+
+# Volcano plot
+ggplot(da_results, aes(logFC, -log10(SpatialFDR))) +
+  geom_point() +
+  geom_hline(yintercept = 1) ## Mark significance threshold (10% FDR)
+
+# Annotate DA results with the MarkerBasedAnnotation column from traj_milo
+da_results <- annotateNhoods(traj_milo, da_results, coldata_col = "MarkerBasedAnnotation")
+
+# Plot of differential abundance across cell types
+plotDAbeeswarm(da_results, group.by = "MarkerBasedAnnotation")
