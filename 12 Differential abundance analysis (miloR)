@@ -1,6 +1,3 @@
-library(miloR)
-library(scater)
-
 # Load the Seurat object
 merged <- readRDS("merged19072024_5.rds")
 
